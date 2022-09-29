@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Synth - Lucas Burkholder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" href="../styles/w3.css">
+    <link rel="stylesheet" href="../styles/LBStyle.css">
+    <script src="../scripts/mainScript.js" type="text/javascript"></script>
+</head>
+<body>
+    <!-- Navbar (sit on top) -->
+    <div w3-include-html="../includes/navbar.html"></div>
+    <div class="navbar-spacer"></div>
+    
+    <div class="w3-content project-content-desktop w3-padding">
+        <h1>G-Funk Synth</h1>
+        <div class="w3-row">
+            <h2>Demo:</h2>
+            <video class="w3-image" controls="controls">
+                <source src="../images/synth_demo.mp4" type="video/mp4" />
+                Your browser does not support the video format. 
+            </video>
+        </div>
+        <div class="w3-row">
+            <div class="w3-col l6 m6 s12">
+                <div class="w3-row">
+                    <h2>Idea</h2>
+                    <p>I have always been a big fan of west coast rappers like Snoop Dogg, Warren G, Nate Dogg, and Dr. Dre, and
+                        the smooth G-Funk hip-hop beats that they rap over. A music producer myself, I decided I wanted to try making 
+                        my own G-Funk beats. A friend suggested that I would need a nice analog synthesizer to get the high-pitched
+                        lead synth sound found in most G-Funk music (<a href="https://youtu.be/dwWUXZtv2C0?t=5" target="_blank">see
+                            an example here</a>), and I figured I could just make my own. The synth I made
+                        reads MIDI notes at its input, and generates an analog audio signal at its output.</p>
+                </div>
+                <div class="w3-row">
+                    <h2>Design</h2>
+                    <p>The final version of my synth circuit involved a square-wave clock signal from the Arduino repeatedly discharging 
+                        a capacitor through a transistor and allowing it to re-charge. This generated a sawtooth wave signal, which 
+                        then went through an adjustable low-pass filter to get the final output tone. </p>
+
+                    <h3>The hardware</h3>
+                        <img src="../images/synth_newdesign.png" class="w3-image project-img">
+                        <p>Above, you can see the schematic for the final synthesizer PCB. It has two circuits, one of which interfacing
+                            between a MIDI keyboard and the Arduino, the other one interfacing with the Arduino to create an audio signal.
+                        </p><p><img src="../images/synth_pcb.png" class="w3-image project-img img-left" alt="G-Funk Synth PCB">
+                            The square-wave clock signal is turned into short voltage spikes by the RC differentiator at the top left,
+                            and the resulting voltage spikes discharge capacitor C4 through the transistor. After the capacitor discharges,
+                            it begins charging again, linearly, until the next clock cycle. This happens at the frequency of the clock 
+                            signal coming from the Arduino, creating a sawtooth wave.
+                        </p>
+                    <h3>The software</h3>
+                    <p>The Arduino code for this device reads MIDI messages, calculates an output frequency, and outputs a square wave of
+                        that frequency to the circuit described above. The two main functions involved are <code class="w3-codespan">handleNoteOn()</code>
+                        and <code class="w3-codespan">glideToFreq()</code>, which handle MIDI "note on" messages, and calculate output frequencies, respectively.
+                        Click on the name of a function below to show its implementation.
+                    </p>
+                    <button onclick="showAccordion('handleNoteOn_code')" class="w3-button w3-block w3-left-align"><code>handleNoteOn()</code></button>
+                    <div id="handleNoteOn_code" class="w3-container w3-hide">
+                        <div class="w3-code multilineCode">
+void handleNoteOn(byte channel, byte pitch, byte velocity) {
+    //First, set glide time and volume
+    glideTime = 1 + analogRead(glidePin) * 150.0 / 1024.0; //should then range from 1-150
+    volume = analogRead(volPin);
+    
+    if (velocity > 0) { //if note on
+        notes.push_back(pitch); //add note to vector
+        glideToFreq(currentFreq, findFreq(notes.back()));
+        currentFreq = findFreq(notes.back());
+    } else { //if note off
+        for (int i = 0; i < notes.size(); i++) {
+            if (notes.at(i) == pitch) {
+                notes.remove(i); //remove it
+            }
+        }
+        if (notes.size() > 0) {
+            glideToFreq(currentFreq, findFreq(notes.back()));
+            currentFreq = findFreq(notes.back());
+        }
+    }
+}
+                        </div>
+                    </div>
+                    <button onclick="showAccordion('glideToFreq_code')" class="w3-button w3-block w3-left-align"><code>glideToFreq()</code></button>
+                    <div id="glideToFreq_code" class="w3-container w3-hide">
+                        <div class="w3-code multilineCode">
+void glideToFreq(double startFreq, double endFreq) {
+    double freqDistance = abs(endFreq - startFreq);
+    double glideSpeed = freqDistance / glideTime;
+    
+    if (startFreq < endFreq) {
+        gliding = true;
+        while (startFreq < endFreq - glideSpeed) {
+            setOscillatorFreq(startFreq);
+            delay(1);
+            startFreq+= glideSpeed;
+        }
+        setOscillatorFreq(endFreq);
+        gliding = false;
+    } else if (startFreq > endFreq) {
+        gliding = true;
+        while (startFreq > endFreq + glideSpeed) {
+            setOscillatorFreq(startFreq);
+            delay(1);
+            startFreq-= glideSpeed;
+        }
+        setOscillatorFreq(endFreq);
+        gliding = false;
+    } else {
+        //if same freq
+        setOscillatorFreq(endFreq);
+    }
+}
+                        </div>
+                    </div>
+                    <p>The Arduino checks for new MIDI messages in the program's main loop, calls <code>handleNoteOn()</code> or 
+                    <code>handleNoteOff()</code> depending on the message, and calculates the desired frequency. It then sets 
+                    the charge voltage (which controls the speed at which the capacitor charges) and the clock frequency
+                    (the number of times each second that the capacitor discharges) accordingly, causing the circuit to 
+                    output a sawtooth waveform.</p>
+                </div>
+            </div>
+            <div class="w3-col l6 m6 s12">
+                <div class="w3-row">
+                    <h2>Approach</h2>
+                    <p>The G-Funk synth uses an Arduino microcontroller with a DAC chip to generate
+                        a control voltage, corresponding to the MIDI note it receives. In the first design, it generated that pitch 
+                        using a 555 timer. The timer would charge or discharge a capacitor for a duration that depended on the 
+                        control voltage, which would then control the frequency of the square wave output.</p>
+                    <p>This design worked to an extent, but it had a lot of variables including the strength of the electrical
+                        connections, and the temperature of the wires and resistors. These would actually change the frequency 
+                        of the signal, causing the synth to easily go out of tune.
+                    </p>
+                    <p>After reading <a href="https://blog.thea.codes/the-design-of-the-juno-dco/" target="blank">this article</a>, 
+                        I realized there was a better way to do it. Inspired by the design of the Roland 
+                        Juno synthesizers, and borrowing heavily from the article I read, I made a new design that, instead of using
+                        a 555 timer, a capacitor, and resistors to generate the sound, used a clock signal from the Arduino. 
+                        To learn more about the design for the DCO (digitally controlled oscillator), give the article a read.
+                        It explains in very simple terms the electronics behind DCO's and VCO's and how they work.</p>
+                </div>
+                <div class="w3-row">
+                    <h2>Challenges</h2>
+                    <p>As far as the software, the biggest challenge was writing code that can read a "glide time" parameter
+                        from a potentiometer wired to the Arduino and slide the output signal between those frequencies (like "legato mode"
+                        on most synthesizers). I tried a few methods before eventually landing on one that worked. The final design 
+                        calculates the distance (in hz) between the two frequencies and the speed at which it must glide between them,
+                        then uses a while loop to repeatedly increment the frequency and delay by 1 millisecond, until it reaches the 
+                        frequency of the key that was pressed. 
+                    </p>
+                    <p><img src="../images/synth_enclosure1.png" class="w3-image project-img img-left" alt="G-Funk Synth Enclosure">
+                        The hardware design and fitting the DCO circuit onto a PCB was actually fairly simple, but fitting it all 
+                        into an enclosure turned out to be a challenge. I learned that I had to not only design the final product,
+                        but also engineer the enclosure so that the final product could be assembled. 
+                    </p>
+                    
+                    
+                    <img src="../images/synth_assembly2.png" class="w3-image project-img" alt="Assembly of the G-Funk Synth">
+                </div>
+            </div>
+            
+        </div>
+        
+    </div>
+    <div class="w3-content project-content-mobile w3-padding">
+        <h1>G-Funk Synth</h1>
+        <div class="w3-row">
+            <h2>Demo:</h2>
+            <video class="w3-image" controls>
+                <source src="../images/synth_demo.MOV" type="video/MOV">
+                Your browser does not support the video format. 
+            </video>
+        </div>
+
+        <div class="w3-row">
+            <h2>Idea</h2>
+            <p>I have always been a big fan of west coast rappers like Snoop Dogg, Warren G, Nate Dogg, and Dr. Dre, and
+                the smooth G-Funk hip-hop beats that they rap over. A music producer myself, I decided I wanted to try making 
+                my own G-Funk beats. A friend suggested that I would need a nice analog synthesizer to get the high-pitched
+                lead synth sound found in most G-Funk music (<a href="https://youtu.be/dwWUXZtv2C0?t=5" target="_blank">see
+                    an example here</a>), and I figured I could just make my own. The synth I made
+                reads MIDI notes at its input, and generates an analog audio signal at its output.</p>
+        </div>
+
+        <div class="w3-row">
+            <h2>Approach</h2>
+            <p>The G-Funk synth uses an Arduino microcontroller with a DAC chip to generate
+                a control voltage, corresponding to the MIDI note it receives. In the first design, it generated that pitch 
+                using a 555 timer. The timer would charge or discharge a capacitor for a duration that depended on the 
+                control voltage, which would then control the frequency of the square wave output.</p>
+            <p>This design worked to an extent, but it had a lot of variables including the strength of the electrical
+                connections, and the temperature of the wires and resistors. These would actually change the frequency 
+                of the signal, causing the synth to easily go out of tune.
+            </p>
+            <p>After reading <a href="https://blog.thea.codes/the-design-of-the-juno-dco/" target="blank">this article</a>, 
+                I realized there was a better way to do it. Inspired by the design of the Roland 
+                Juno synthesizers, and borrowing heavily from the article I read, I made a new design that, instead of using
+                a 555 timer, a capacitor, and resistors to generate the sound, used a clock signal from the Arduino. 
+                To learn more about the design for the DCO (digitally controlled oscillator), give the article a read.
+                It explains in very simple terms the electronics behind DCO's and VCO's and how they work.</p>
+        </div>
+
+        <div class="w3-row">
+            <h2>Design</h2>
+            <p>The final version of my synth circuit involved a square-wave clock signal from the Arduino repeatedly discharging 
+                a capacitor through a transistor and allowing it to re-charge. This generated a sawtooth wave signal, which 
+                then went through an adjustable low-pass filter to get the final output tone. </p>
+
+            <h3>The hardware</h3>
+                <img src="../images/synth_newdesign.png" class="w3-image project-img">
+                <p>Above, you can see the schematic for the final synthesizer PCB. It has two circuits, one of which interfacing
+                    between a MIDI keyboard and the Arduino, the other one interfacing with the Arduino to create an audio signal.
+                </p><p><img src="../images/synth_pcb.png" class="w3-image project-img img-left" alt="G-Funk Synth PCB">
+                    The square-wave clock signal is turned into short voltage spikes by the RC differentiator at the top left,
+                    and the resulting voltage spikes discharge capacitor C4 through the transistor. After the capacitor discharges,
+                    it begins charging again, linearly, until the next clock cycle. This happens at the frequency of the clock 
+                    signal coming from the Arduino, creating a sawtooth wave.
+                </p>
+            <h3>The software</h3>
+            <p>The Arduino code for this device reads MIDI messages, calculates an output frequency, and outputs a square wave of
+                that frequency to the circuit described above. The two main functions involved are <code class="w3-codespan">handleNoteOn()</code>
+                and <code class="w3-codespan">glideToFreq()</code>, which handle MIDI "note on" messages, and calculate output frequencies, respectively.
+                Click on the name of a function below to show its implementation.
+            </p>
+            <button onclick="showAccordion('handleNoteOn_code')" class="w3-button w3-block w3-left-align"><code>handleNoteOn()</code></button>
+            <div id="handleNoteOn_code" class="w3-container w3-hide">
+                <div class="w3-code multilineCode">
+void handleNoteOn(byte channel, byte pitch, byte velocity) {
+//First, set glide time and volume
+glideTime = 1 + analogRead(glidePin) * 150.0 / 1024.0; //should then range from 1-150
+volume = analogRead(volPin);
+
+if (velocity > 0) { //if note on
+notes.push_back(pitch); //add note to vector
+glideToFreq(currentFreq, findFreq(notes.back()));
+currentFreq = findFreq(notes.back());
+} else { //if note off
+for (int i = 0; i < notes.size(); i++) {
+    if (notes.at(i) == pitch) {
+        notes.remove(i); //remove it
+    }
+}
+if (notes.size() > 0) {
+    glideToFreq(currentFreq, findFreq(notes.back()));
+    currentFreq = findFreq(notes.back());
+}
+}
+}
+                </div>
+            </div>
+            <button onclick="showAccordion('glideToFreq_code')" class="w3-button w3-block w3-left-align"><code>glideToFreq()</code></button>
+            <div id="glideToFreq_code" class="w3-container w3-hide">
+                <div class="w3-code multilineCode">
+void glideToFreq(double startFreq, double endFreq) {
+double freqDistance = abs(endFreq - startFreq);
+double glideSpeed = freqDistance / glideTime;
+
+if (startFreq < endFreq) {
+gliding = true;
+while (startFreq < endFreq - glideSpeed) {
+    setOscillatorFreq(startFreq);
+    delay(1);
+    startFreq+= glideSpeed;
+}
+setOscillatorFreq(endFreq);
+gliding = false;
+} else if (startFreq > endFreq) {
+gliding = true;
+while (startFreq > endFreq + glideSpeed) {
+    setOscillatorFreq(startFreq);
+    delay(1);
+    startFreq-= glideSpeed;
+}
+setOscillatorFreq(endFreq);
+gliding = false;
+} else {
+//if same freq
+setOscillatorFreq(endFreq);
+}
+}
+                </div>
+            </div>
+            <p>The Arduino checks for new MIDI messages in the program's main loop, calls <code>handleNoteOn()</code> or 
+            <code>handleNoteOff()</code> depending on the message, and calculates the desired frequency. It then sets 
+            the charge voltage (which controls the speed at which the capacitor charges) and the clock frequency
+            (the number of times each second that the capacitor discharges) accordingly, causing the circuit to 
+            output a sawtooth waveform.</p>
+        </div>
+        
+        <div class="w3-row">
+            <h2>Challenges</h2>
+            <p>As far as the software, the biggest challenge was writing code that can read a "glide time" parameter
+                from a potentiometer wired to the Arduino and slide the output signal between those frequencies (like "legato mode"
+                on most synthesizers). I tried a few methods before eventually landing on one that worked. The final design 
+                calculates the distance (in hz) between the two frequencies and the speed at which it must glide between them,
+                then uses a while loop to repeatedly increment the frequency and delay by 1 millisecond, until it reaches the 
+                frequency of the key that was pressed. 
+            </p>
+            <p><img src="../images/synth_enclosure1.png" class="w3-image project-img img-left" alt="G-Funk Synth Enclosure">
+                The hardware design and fitting the DCO circuit onto a PCB was actually fairly simple, but fitting it all 
+                into an enclosure turned out to be a challenge. I learned that I had to not only design the final product,
+                but also engineer the enclosure so that the final product could be assembled. 
+            </p>
+            
+            
+            <img src="../images/synth_assembly2.png" class="w3-image project-img" alt="Assembly of the G-Funk Synth">
+        </div>
+        
+    </div>
+
+    <div w3-include-html="../includes/footer.html"></div>
+    <script>
+        //for accordions
+        function showAccordion(id) {
+            var x = document.getElementById(id);
+            if (x.className.indexOf("w3-show") == -1) {
+                x.className += " w3-show";
+            } else {
+                x.className = x.className.replace(" w3-show", "");
+            }
+        }
+    </script>
+    <script>includeHTML();</script>
+</body>
+</html>

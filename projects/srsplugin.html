@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bass Pedal - Lucas Burkholder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" href="../styles/w3.css">
+    <link rel="stylesheet" href="../styles/LBStyle.css">
+    <script src="../scripts/mainScript.js" type="text/javascript"></script>
+</head>
+<body>
+    <!-- Navbar (sit on top) -->
+    <div w3-include-html="../includes/navbar.html"></div>
+    <div class="navbar-spacer"></div>
+    
+    <div class="w3-content project-content-desktop w3-padding">
+        <h1>SRS Stereo Widener Plugin</h1>
+        <div class="w3-row">
+            <h2>Demo:</h2>
+            <video class="w3-image" controls>
+                <source src="../images/srs_widener_vid.mp4" type="video/mp4">
+            </video>
+        </div>
+        <div class="w3-row">
+        
+            <h2>Approach</h2>
+            <p>For a project in my audio signal processing class, I was assigned to create a stereo widening plugin
+                modeled after the Hughes SRS stereo processor. It works by splitting the stereo input signal into a
+                mid signal and a side signal, and running the side signal through various filters to accentuate the 
+                sides of the stereo field, psychoacoustically "widening" the sound. The "side" signal is run through
+                three filters: a high shelf, an all-pass filter, and a low frequency parametric EQ. Depending on the
+                sound they want, the user can play around with the filter settings to alter the sides of the stereo
+                field as well as adjust the overall mid and side levels. The result is a wider sound that can be 
+                used on reverbs, masters, or really any stereo track that a mix engineer may want to widen.
+            </p>
+        
+            <h2>Code</h2>
+            <p>The main audio processing code for the SRS-style stereo widener is shown below. I used RackAFX both to 
+                prototype my DSP and to create the final plugin GUI. It involves splitting the signal into mid-side, 
+                adjusting for gain, and processing the side signal through three different filters in parallel. The 
+                "EQ Listen mode" feature designed for prototyping allows the developer to hear only the processing 
+                that is applied to the side signal, so as to understand better how they are altering it.
+            </p>
+            <div class="w3-code multilineCode">
+bool eqListenMode = getControl(controlID::m_uEQListen) == 1;
+
+bufferType sumSignal = 0.5 * (leftChannel + rightChannel);			//mid channel
+bufferType differenceSignal = 0.5 * (leftChannel - rightChannel);	//side channel
+
+//high-pass the difference signal (LFF)
+differenceSignal = LFF.process(differenceSignal);
+
+//Apply mid/side gain
+float sumGain = getControl(controlID::m_fSumLevel);
+float differenceGain = getControl(controlID::m_fDiffLevel);
+
+sumSignal *= dBToRatio(sumGain);
+differenceSignal *= dBToRatio(differenceGain);
+
+// Difference 1 - Low Parametric EQ
+bufferType differenceWithLPEQ = LPEQ.process(differenceSignal);
+
+// Difference 2 - All Pass Filter
+float APFGainRatio = dBToRatio(getControl(controlID::m_fAPFGain));
+bufferType differenceWithAPF = getControl(controlID::m_uAPFEnable) == 1 ? APFGainRatio * APF.process(differenceSignal) : differenceSignal;
+
+// Difference 3 - High shelf
+bufferType differenceWithHSF = HSF.process(differenceSignal); 
+
+// sum the different branches to get parallel-filtered difference signal
+differenceSignal = (differenceWithHSF + differenceWithAPF + differenceWithLPEQ) / 3.0;
+
+
+// EQ-LISTEN MODE: process the sum signal through filters
+bufferType sumWithLPEQ = sumLPEQ.process(sumSignal);
+bufferType sumWithAPF = getControl(controlID::m_uAPFEnable) == 1 ? APFGainRatio * sumAPF.process(sumSignal) : sumSignal;
+bufferType sumWithHSF = sumHSF.process(sumSignal);
+
+bufferType eqListenSignal = (sumWithLPEQ + sumWithAPF + sumWithHSF) / 3.0;
+
+bufferType leftOut = eqListenMode ? eqListenSignal : (0.5 * (leftChannel + sumSignal + differenceSignal)); //mixed with 50% dry signal
+
+bufferType rightOut = eqListenMode ? eqListenSignal : (0.5 * (rightChannel + sumSignal - differenceSignal));
+
+// Apply output gain
+float outputGain = dBToRatio(getControl(controlID::m_fOutputLvl));
+
+leftOut *= outputGain;
+rightOut *= outputGain;</div>        
+        </div>     
+    </div>
+
+    <div class="w3-content project-content-mobile w3-padding">
+        <h1>Bass Pedal (mobile)</h1>
+    </div>
+
+    <div w3-include-html="../includes/footer.html"></div>
+    <script>
+        //for accordions
+        function showAccordion(id) {
+            var x = document.getElementById(id);
+            if (x.className.indexOf("w3-show") == -1) {
+                x.className += " w3-show";
+            } else {
+                x.className = x.className.replace(" w3-show", "");
+            }
+        }
+    </script>
+    <script>includeHTML();</script>
+</body>
+</html>

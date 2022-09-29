@@ -1,0 +1,142 @@
+html,body{
+    font-family:"Trebuchet MS", Tahoma,sans-serif;
+}
+
+.navbar-spacer {
+    height: 54.5px;
+}
+
+.project-container {
+    transition: box-shadow 0.2s;
+}
+.project-container:hover {
+    box-shadow: 0px 2px 20px 1px #555;
+}
+
+.project-container img {
+    opacity: 50%;
+    transition: opacity 0.2s;
+    filter: brightness(80%);
+}
+.project-container:hover img{opacity: 40%;}
+
+.project-container div {
+    z-index:2; 
+    transition: font-weight 0.2s;
+    transition: box-shadow 0.3s;
+    border: 1px solid #999;
+}
+.project-container:hover div {
+    font-weight:bold;
+    box-shadow: 0px 2px 20px 1px #555;
+}
+
+.bgWhite {
+    background-color: #fff;
+}
+
+.menuDDHover .w3-dropdown-content {
+    top: 46px;
+    z-index: 3;
+}
+
+.multilineCode {
+    white-space: pre-wrap;
+    font-size:small;
+    /*border-left: 4px solid rgb(197, 83, 83);*/
+    border-left: 4px solid #333;
+}
+
+
+.project-img {
+    padding: 10px;
+}
+
+.img-left {
+    width: 50%;
+    float: left;    
+}
+
+.img-right {
+    width: 50%;
+    float: right;
+}
+
+.img-col {
+    width: 100%;
+}
+
+.w3-col p {
+    margin-right:10px;
+}
+
+.project-content-mobile {
+    display: block;
+}
+
+.project-content-desktop {
+    display: none;
+}
+
+@media (min-width:601px) {
+    .project-content-mobile {
+        display: none;
+    }
+
+    .project-content-desktop {
+        display: block;
+    }
+}
+
+.nav-dropdown-header {
+    margin: 0px;
+    font-size: smaller;
+    background-color: #eee;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.songDiv {
+    margin:5px;
+}
+
+.homeMusicLink {
+    height: 200px;
+    background-position: center;
+
+    opacity: 30%;
+    transition: opacity 0.2s;
+    filter: brightness(80%);
+    filter: blur(3px);
+}
+
+
+.resume-embed {
+    width: 100%;
+    height: 100%;
+}
+
+.content-fill-window {
+    height: calc(100vh - 107px);
+}
+
+.resumeHeight {
+    height: calc(100% - 126.5px);
+}
+
+/*
+Structure:
+
+navbar-spacer (54.5px)
+content-fill-window: 100vh - (54.5+52.5) = calc(100vh - 107px)
+footer (52.5px)
+
+WITHIN content-fill-window:
+h1: 74 px including margin
+p link: 52.5px including margin
+total other than resume: 126.5px
+
+find rest of spacing so we know where resume embed has to START
+Then calculate 100vh minus the top and bottom
+
+*/

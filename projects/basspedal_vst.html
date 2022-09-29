@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bass Pedal - Lucas Burkholder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" href="../styles/w3.css">
+    <link rel="stylesheet" href="../styles/LBStyle.css">
+    <script src="../scripts/mainScript.js" type="text/javascript"></script>
+</head>
+<body>
+    <!-- Navbar (sit on top) -->
+    <div w3-include-html="../includes/navbar.html"></div>
+    <div class="navbar-spacer"></div>
+    
+    <div class="w3-content w3-padding">
+        <h1>Bass Pedal - Plugin version</h1>
+        <div class="w3-row">
+            <h2>Demo:</h2>
+            <video class="w3-image" controls>
+                <source src="../images/basspedalvst_demo.mp4" type="video/mp4">
+            </video>
+        </div>
+        <div class="w3-row">
+            <div class="w3-col l6 m6 s12">
+                <h2>Design</h2>
+                <p>I designed the Bass Pedal plugin as a software plugin version of my <a href="./basspedal.html">hardware bass pedal</a>.
+                    The plugin is tailored towards bass players who are mixing their own recordings and want a quick and easy way to get
+                    the "fat" or "punchy" sound they are looking for, even if they don't have a strong understanding of compression, EQ, 
+                    and saturation.
+                </p><p>I used the JUCE plugin framework for this project. I had already designed the DSP effect objects in C++, so all I
+                    really had to do was implement the effects in JUCE and design a GUI for it. As I discussed regarding the hardware bass 
+                    pedal I designed, the "melody" mode is not designed to be used simultaneously with the other effects, so I had to create
+                    some logic to disable the other buttons while "melody" mode is on. They save the state of the other three settings,
+                </p>
+            </div>
+            <div class="w3-col l6 m6 s12">
+                <h2>Code</h2>
+                <p>Because I had already made all the C++ effect objects, the bulk of the design just involved creating the GUI. The GUI
+                    rendering code, event listeners, and the audio processing code are below. Click on one of the functions to view the code.
+                </p>
+                <button onclick="showAccordion('bassvstprocessing_code')" class="w3-button w3-block w3-left-align">Audio
+                    <code>processBlock()</code>Function</button>
+                <div id="bassvstprocessing_code" class="w3-container w3-hide">
+                    <div class="w3-code multilineCode">
+void BassPedalAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+    {
+        juce::ScopedNoDenormals noDenormals;
+        auto totalNumInputChannels  = getTotalNumInputChannels();
+        auto totalNumOutputChannels = getTotalNumOutputChannels();
+    
+        for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+            buffer.clear (i, 0, buffer.getNumSamples());
+    
+        // UPDATE fx parameters
+        FatPunchParameters fpParams = fatPunchL.getParameters();
+        fpParams.fatOn = fatOn;
+        fpParams.darkenOn = darkOn;
+        fpParams.punchCompOn = punchOn;
+        fatPunchL.setParameters(fpParams);
+        fatPunchR.setParameters(fpParams);
+    
+        MelodyModeParameters mmParams = mmL.getParameters();
+        mmParams.on = melodyOn;
+        mmL.setParameters(mmParams);
+        mmR.setParameters(mmParams);
+    
+        //update gain here
+        float gainFactor = dB2Raw(inputGainVal);
+    
+        auto* channelDataL = buffer.getWritePointer(0);
+        auto* channelDataR = buffer.getWritePointer(1);
+    
+        for (int i = 0; i < buffer.getNumSamples(); i++) {
+            auto xnL = channelDataL[i];
+            auto xnR = channelDataR[i];
+    
+            xnL *= gainFactor;
+            xnR *= gainFactor;
+    
+            xnL = fatPunchL.processAudioSample(xnL);
+            xnR = fatPunchR.processAudioSample(xnR);
+    
+            xnL = mmL.processAudioSample(xnL);
+            xnR = mmR.processAudioSample(xnR);
+    
+            channelDataL[i] = xnL;
+            channelDataR[i] = xnR;
+        }
+    
+    }
+                    </div>
+                </div>
+                <button onclick="showAccordion('guiListener_code')" class="w3-button w3-block w3-left-align">GUI event listeners</button>
+                <div id="guiListener_code" class="w3-container w3-hide">
+                    <div class="w3-code multilineCode">
+fatBtn.onClick = [this] {
+    if (!audioProcessor.melodyOn)
+        audioProcessor.fatOn = !audioProcessor.fatOn;
+    repaint();
+};
+punchBtn.onClick = [this] {
+    if (!audioProcessor.melodyOn)
+        audioProcessor.punchOn = !audioProcessor.punchOn;
+    repaint();
+};
+darkBtn.onClick = [this] {
+    if (!audioProcessor.melodyOn)
+        audioProcessor.darkOn = !audioProcessor.darkOn;
+    repaint();
+};
+melodyBtn.onClick = [this] {
+    if (!audioProcessor.melodyOn) {
+        //turn on 
+        audioProcessor.melodyOn = true;
+
+        //save other modes to memory
+        audioProcessor.fatOn_mem = audioProcessor.fatOn;
+        audioProcessor.darkOn_mem = audioProcessor.darkOn;
+        audioProcessor.punchOn_mem = audioProcessor.punchOn;
+
+        //turn off other modes
+        audioProcessor.fatOn = false;
+        audioProcessor.darkOn = false;
+        audioProcessor.punchOn = false;
+    }
+    else {
+        //turn off
+        audioProcessor.melodyOn = false;
+
+        //recall other modes from memory
+        audioProcessor.fatOn = audioProcessor.fatOn_mem;
+        audioProcessor.punchOn = audioProcessor.punchOn_mem;
+        audioProcessor.darkOn = audioProcessor.darkOn_mem;
+    }
+    repaint();
+};
+                    </div>
+                </div>
+                <button onclick="showAccordion('guiPaint_code')" class="w3-button w3-block w3-left-align">GUI <code>paint()</code> function</button>
+                <div id="guiPaint_code" class="w3-container w3-hide">
+                    <div class="w3-code multilineCode">
+void BassPedalAudioProcessorEditor::paint (juce::Graphics& g)
+{
+    // (Our component is opaque, so we must completely fill the background with a solid colour)
+    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+
+    //draw LEDs
+    int ledWidth = 20;
+
+    g.setColour(juce::Colour(0xffaa0000));
+    g.drawEllipse((gridX / 2) + gridX * 1 - ledWidth / 2, 50, ledWidth, ledWidth, 3);
+    g.drawEllipse((gridX / 2) + gridX * 2 - ledWidth / 2, 50, ledWidth, ledWidth, 3);
+    g.drawEllipse((gridX / 2) + gridX * 3 - ledWidth / 2, 50, ledWidth, ledWidth, 3);
+    g.drawEllipse((gridX / 2) + gridX * 4 - ledWidth / 2, 50, ledWidth, ledWidth, 3);
+
+    g.setColour(juce::Colour(0xffff0000));
+
+    int ledPad = 2;
+
+    if (audioProcessor.fatOn) g.fillEllipse((gridX / 2) + gridX * 1 - ledWidth / 2 + ledPad, 50 + ledPad, ledWidth - 2 * ledPad, ledWidth - 2 * ledPad);
+    if (audioProcessor.punchOn) g.fillEllipse((gridX / 2) + gridX * 2 - ledWidth / 2 + ledPad, 50 + ledPad, ledWidth - 2 * ledPad, ledWidth - 2 * ledPad);
+    if (audioProcessor.darkOn) g.fillEllipse((gridX / 2) + gridX * 3 - ledWidth / 2 + ledPad, 50 + ledPad, ledWidth - 2 * ledPad, ledWidth - 2 * ledPad);
+    if (audioProcessor.melodyOn) g.fillEllipse((gridX / 2) + gridX * 4 - ledWidth / 2 + ledPad, 50 + ledPad, ledWidth - 2 * ledPad, ledWidth - 2 * ledPad);
+}
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+      
+     
+    </div>
+
+    <div w3-include-html="../includes/footer.html"></div>
+    <script>
+        //for accordions
+        function showAccordion(id) {
+            var x = document.getElementById(id);
+            if (x.className.indexOf("w3-show") == -1) {
+                x.className += " w3-show";
+            } else {
+                x.className = x.className.replace(" w3-show", "");
+            }
+        }
+    </script>
+    <script>includeHTML();</script>
+</body>
+</html>
