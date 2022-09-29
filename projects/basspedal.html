@@ -193,7 +193,136 @@ size_t                                size)
     </div>
 
     <div class="w3-content project-content-mobile w3-padding">
-        <h1>Bass Pedal (mobile)</h1>
+        <h1>Bass Pedal</h1>
+        <div class="w3-row">
+            <img class="w3-image" src="../images/pedal_final2.jpg" id="bassPedalImage">
+        </div>
+
+        <div class="w3-row">
+            <h2>Idea</h2>
+            <p>The idea for the Bass Pedal came from my dad, who plays bass guitar in a band. He pointed out to me the sound of
+                the bass guitar in some songs he likes, and how it is sometimes "punchier" or "fatter" than the sound of his
+                own bass when he plays live. I understood that the sound he was describing in the recordings he liked came from 
+                a combination of saturation, EQ, and compression, most likely applied by the producer or recording engineer. 
+                His band doesn't have a live sound engineer, so I decided to design him a pedal with some of these effects on it 
+                that would be easy to use in a live set.
+            </p>
+        </div>
+        <div class="w3-row">
+            <h2>Design</h2>
+            <p>Because of the microcontroller I used for this project, the Daisy Seed from Electro-Smith, almost all of the design
+                for this project was just programming. The built-in audio hardware on the board handles all of the conversion between
+                digital and analog, so all I had to do were basically two things: 1) read input from the buttons and knob, changing
+                effect parameters accordingly, and 2) write an audio processing function that takes an input audio buffer and creates
+                a processed output buffer.
+            </p>
+            <h3>The hardware</h3>
+            <p>The hardware design for the bass pedal was very simple, since there was no analog audio processing happening. All I
+                had to do for the hardware was connect the audio jacks and all the user interface components (buttons, LEDs, 
+                potentiometers) to the microcontroller. The schematic below shows how it is all connected:
+                <img src="../images/basspedal_schematic.png" alt="Bass Pedal Schematic" class="img-col project-img">
+            </p>
+            
+            <h3>The software</h3>
+            <p>As far as the DSP code, I wrote two C++ effect objects for this pedal. The pedal does not allow the user to enable the
+                "melody" effect and any of the other three effects simultaneously (it would probably not sound good since the effects
+                are not designed for that), so the two effects are called "FatPunch" and "MelodyMode". The "FatPunch" object has three
+                of its own DSP member objects (two filters and a compressor), with preset parameters, in addition to a waveshaper
+                function for the distortion. Click on one of the functions below to show which objects are being used.
+            </p>
+            <button onclick="showAccordion('fatpunch_code_mobile')" class="w3-button w3-block w3-left-align"><code>FatPunch</code> processing function</button>
+            <div id="fatpunch_code_mobile" class="w3-container w3-hide">
+                <div class="w3-code multilineCode">
+virtual double processAudioSample(double xn) {
+    // Step 1 - Distortion
+    if (parameters.fatOn)
+        xn = tanhWaveShaper(xn, parameters.inDistAmt);
+    // Step 2 - EQ
+    if (parameters.fatOn) {
+        xn *= dB2Raw(-6.0);
+        xn = lpeq.processAudioSample(xn);
+    
+    }
+    if (parameters.darkenOn)
+        xn = hsf.processAudioSample(xn);
+
+    // Step 3 - Compression
+    if (parameters.punchCompOn)
+        xn = compressor.processAudioSample(xn);
+
+    return xn;
+}
+                </div>
+            </div>
+            <button onclick="showAccordion('melody_code_mobile')" class="w3-button w3-block w3-left-align"><code>MelodyMode</code> processing function</button>
+            <div id="melody_code_mobile" class="w3-container w3-hide">
+                <div class="w3-code multilineCode">
+virtual double processAudioSample(double xn) {
+    if (!parameters.on) return xn;
+
+    // Distortion/Saturation
+    double yn = waveShaper(xn);
+
+    // EQ mid
+    yn = midEQ.processAudioSample(yn);
+
+    // Attenuate to make up for distortion boosts
+    yn *= 0.3;
+
+    // EQ high
+    yn = hiEQ.processAudioSample(yn);
+
+    
+    // Output
+    return yn;
+}
+                </div>
+            </div>
+            <button onclick="showAccordion('mainCallback_code_mobile')" class="w3-button w3-block w3-left-align">Main audio processing in <code>Callback()</code> function</button>
+            <div id="mainCallback_code_mobile" class="w3-container w3-hide">
+                <div class="w3-code multilineCode">
+static void Callback(AudioHandle::InterleavingInputBuffer  in,
+AudioHandle::InterleavingOutputBuffer out,
+size_t                                size)
+{
+    
+    .
+    .
+    .
+
+    // AUDIO PROCESSING
+    double inputSample, inputLevel;
+    float inputLevelSum = 0.0;
+    for (size_t i = 0; i < size; i += 2) {
+        //Apply input gain
+        inputSample = in[i] * knobVal * 5;
+
+        // Read input level, output to rgb LED
+        inputLevel = inputLevelDetector.processAudioSample(inputSample); 
+        if (i == 0)
+            inLevelLED.SetColor(getLEDColor(inputLevel));
+
+        // Process audio through fatPunch object
+        out[i] = fatPunch.processAudioSample(inputSample);
+        
+        // Process audio through MelodyMode object
+        out[i] = melodyMode.processAudioSample(out[i]);
+
+        //Output sample to both channels
+        out[i+1] = out[i]; //interleaved output
+    } 
+
+    .
+    .
+    .
+}
+                </div>
+            </div>
+        </div>
+        <div class="w3-row">
+        </div>
+        <div class="w3-row">
+        </div>
     </div>
 
     <div w3-include-html="../includes/footer.html"></div>
