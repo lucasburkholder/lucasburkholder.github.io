@@ -31,7 +31,8 @@
                 </p><p>I used the JUCE plugin framework for this project. I had already designed the DSP effect objects in C++, so all I
                     really had to do was implement the effects in JUCE and design a GUI for it. As I discussed regarding the hardware bass 
                     pedal I designed, the "melody" mode is not designed to be used simultaneously with the other effects, so I had to create
-                    some logic to disable the other buttons while "melody" mode is on. They save the state of the other three settings,
+                    some logic to disable the other buttons while "melody" mode is on. They save the state of the other three settings, 
+                    reloading them when the "melody" mode is turned off.
                 </p>
             </div>
             <div class="w3-col l6 m6 s12">
