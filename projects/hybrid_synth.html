@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hybrid Digital/Analog Synth - Lucas Burkholder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" href="../styles/w3.css">
+    <link rel="stylesheet" href="../styles/LBStyle.css">
+    <script src="../scripts/mainScript.js" type="text/javascript"></script>
+</head>
+<body>
+    <!-- Navbar (sit on top) -->
+    <div w3-include-html="../includes/navbar.html"></div>
+    <div class="navbar-spacer"></div>
+    <div class="w3-content project-content-desktop w3-padding">
+        <h1>Hybrid Digital/Analog Synth</h1>
+        <p>Analog hardware synthesizers are used widely, as many producers and musicians love the analog character of the sound and the
+            experience of using physical knobs and controls to manipulate it. However, they are often much more expensive and less 
+            reliable than the digital software synths that are most commonly used in music production. This design was an effort to bring 
+            together the best of both worlds&mdash; an analog sound and experience, and the low cost and reliability of a digital software
+            synth, and it ended up winning silver in the 
+            <a href="https://www.aesstudents.org/competitions/saul-walker-student-design-competition/" target="_blank">AES Saul Walker 
+                Student Design Competition</a>.</p>
+        <div class="w3-row">
+            <h2>Demo:</h2>
+        
+            <div class="w3-col l12 m12 s12">
+                <div class="ytVideoWrapper w3-image"> 
+                    <iframe width="948" height="150" src="https://www.youtube.com/embed/eZB14emvaC8" title="Hybrid Digital/Analog Synthesizer" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>                    
+                </div>  
+            </div>  
+        </div>
+        <div class="w3-row">
+            <div class="w3-col l6 m6 s12">
+                <div class="w3-row">
+                    <h2>Concept</h2>
+                    <p>As a senior design project, I decided to expand on my <a href="synth.html">G-Funk Synth</a> project. The original synth lacked sonic flexibility,
+                    simply emitting a basic sawtooth wave with no additional effects. I wanted to create something that would be more useful, with volume
+                    and filter envelopes, vibrato control, and a chorus effect.</p>
+                    <p>My idea was to create a hardware device that would include the digitally-controlled oscillator from my original synth, generating 
+                        an analog waveform based on MIDI input, but that would also act as a control surface for a software plugin running on the user's computer.
+                        That way, additional effects processing could be done digitally in the user's DAW, providing more variety in the possible sounds,
+                        and it could all be controlled from one tactile hardware control surface.
+                    </p>
+                    <p>All the user would then have to do is plug the device into their audio interface with an analog audio cable, plug it into their 
+                        computer with a USB cable, set up the correct MIDI routing in their DAW, and load the included plugin onto an audio track. Then 
+                        they would have an analog synthesizer with digital effects, all controllable from one hardware device at a fraction of the cost 
+                        of most analog hardware synths. 
+                    </p>
+                    <p>A block diagram of the system is shown below:</p>
+                    <img class="w3-image img-col project-img" style="padding-right: 20px;" alt="System block diagram" src="../images/hybrid_synth_block_diagram.png">
+                </div>
+                <div class="w3-row">
+                    <h2>Results</h2>
+                    <p>The device successfully generates an analog sawtooth waveform that eliminates aliasing. Below you can find a frequency-domain plot
+                        of a sawtooth wave generated digitally by a software synthesizer, alongside that of my analog synthesizer's sawtooth wave.
+                    </p>
+                    <img class="w3-image img-col project-img" alt="Frequency domain plots" src="../images/hybrid_synth_fft_plots.png">
+                    <p>The digitally generated version has visible aliasing happening toward the higher frequencies. In the analog version however, those 
+                        aliases do not exist inherently in the signal, and are not introduced by the audio interface's analog-to-digital converter.</p>
+                </div>
+            </div>
+            <div class="w3-col l6 m6 s12">
+                <div class="w3-row">
+                    <h2>Design</h2>
+                    <h3>The hardware</h3>
+                    <p>The schematic of the hardware device is shown below. It uses the Teensy microcontroller to read MIDI note data, sending control signals
+                        to the oscillator (DCO) circuit. The microcontroller also sends MIDI control change data to the software plugin, allowing the user to
+                        control the plugin using the rotary encoders on the device.</p>
+                    <p>Because the microcontroller is limited on GPIO pins, it uses two 74HC165 shift registers to multiplex 8 rotary encoders into 4 GPIO pins 
+                        instead of 16. It also has a few other buttons, LEDs and encoders that are connected directly to the microcontroller.</p>
+                    <img class="w3-image img-col project-img" alt="Hardware device schematic" src="../images/hybrid_synth_schematic.png">
+                    <h3>The software</h3>
+                    <p>The hardware device is designed to be used with a software plugin that applies additional effects processing to the signal, digitally 
+                        within the user's DAW. It includes a volume, glide time, chorus, and vibrato control for the oscillator, as well as an envelope 
+                        generator to shape either the amplitude of the signal, the low-pass filter cutoff, or both. The plugin was designed in C++, using the 
+                        JUCE framework.</p>
+                    <p>The GUI, with custom-designed knobs and dividers between different sections, was designed to look somewhat similar to the hardware control 
+                        surface. Since the controls are the same, the goal is for the user to be able to adjust the controls either on their computer using a 
+                        mouse, or using the rotary encoders built into the hardware device. The plugin's GUI is shown below:
+                    </p>
+                    <img class="w3-image img-col project-img" alt="FX Plugin GUI" src="../images/hybrid_synth_gui.png">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="w3-content project-content-mobile w3-padding">
+        <h1>Hybrid Digital/Analog Synth</h1>
+        <p>Analog hardware synthesizers are used widely, as many producers and musicians love the analog character of the sound and the
+            experience of using physical knobs and controls to manipulate it. However, they are often much more expensive and less 
+            reliable than the digital software synths that are most commonly used in music production. This design was an effort to bring 
+            together the best of both worlds&mdash; an analog sound and experience, and the low cost and reliability of a digital software
+            synth, and it ended up winning silver in the 
+            <a href="https://www.aesstudents.org/competitions/saul-walker-student-design-competition/" target="_blank">AES Saul Walker 
+                Student Design Competition</a>.</p>
+        <div class="w3-row">
+            <h2>Demo:</h2>
+           
+            <div class="w3-col l12 m12 s12">
+                <div class="ytVideoWrapper w3-image" style="padding-bottom: 56.25%;">
+                    <iframe width="948" height="150" src="https://www.youtube.com/embed/eZB14emvaC8" title="Hybrid Digital/Analog Synthesizer" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>                    
+                </div>  
+            </div>  
+        </div>
+        <div class="w3-row">
+            <h2>Concept</h2>
+            <p>As a senior design project, I decided to expand on my <a href="synth.html">G-Funk Synth</a> project. The original synth lacked sonic flexibility,
+            simply emitting a basic sawtooth wave with no additional effects. I wanted to create something that would be more useful, with volume
+            and filter envelopes, vibrato control, and a chorus effect.</p>
+            <p>My idea was to create a hardware device that would include the digitally-controlled oscillator from my original synth, generating 
+                an analog waveform based on MIDI input, but that would also act as a control surface for a software plugin running on the user's computer.
+                That way, additional effects processing could be done digitally in the user's DAW, providing more variety in the possible sounds,
+                and it could all be controlled from one tactile hardware control surface.
+            </p>
+            <p>All the user would then have to do is plug the device into their audio interface with an analog audio cable, plug it into their 
+                computer with a USB cable, set up the correct MIDI routing in their DAW, and load the included plugin onto an audio track. Then 
+                they would have an analog synthesizer with digital effects, all controllable from one hardware device at a fraction of the cost 
+                of most analog hardware synths. 
+            </p>
+            <p>A block diagram of the system is shown below:</p>
+            <img class="w3-image img-col project-img" style="padding-right: 20px;" alt="System block diagram" src="../images/hybrid_synth_block_diagram.png">
+        </div>
+        <div class="w3-row">
+            <h2>Design</h2>
+            <h3>The hardware</h3>
+            <p>The schematic of the hardware device is shown below. It uses the Teensy microcontroller to read MIDI note data, sending control signals
+                to the oscillator (DCO) circuit. The microcontroller also sends MIDI control change data to the software plugin, allowing the user to
+                control the plugin using the rotary encoders on the device.</p>
+            <p>Because the microcontroller is limited on GPIO pins, it uses two 74HC165 shift registers to multiplex 8 rotary encoders into 4 GPIO pins 
+                instead of 16. It also has a few other buttons, LEDs and encoders that are connected directly to the microcontroller.</p>
+            <img class="w3-image img-col project-img" alt="Hardware device schematic" src="../images/hybrid_synth_schematic.png">
+            <h3>The software</h3>
+            <p>The hardware device is designed to be used with a software plugin that applies additional effects processing to the signal, digitally 
+                within the user's DAW. It includes a volume, glide time, chorus, and vibrato control for the oscillator, as well as an envelope 
+                generator to shape either the amplitude of the signal, the low-pass filter cutoff, or both. The plugin was designed in C++, using the 
+                JUCE framework.</p>
+            <p>The GUI, with custom-designed knobs and dividers between different sections, was designed to look somewhat similar to the hardware control 
+                surface. Since the controls are the same, the goal is for the user to be able to adjust the controls either on their computer using a 
+                mouse, or using the rotary encoders built into the hardware device. The plugin's GUI is shown below:
+            </p>
+            <img class="w3-image img-col project-img" alt="FX Plugin GUI" src="../images/hybrid_synth_gui.png">
+        </div>
+        <div class="w3-row">
+            <h2>Results</h2>
+            <p>The device successfully generates an analog sawtooth waveform that eliminates aliasing. Below you can find a frequency-domain plot
+                of a sawtooth wave generated digitally by a software synthesizer, alongside that of my analog synthesizer's sawtooth wave.
+            </p>
+            <img class="w3-image img-col project-img" alt="Frequency domain plots" src="../images/hybrid_synth_fft_plots.png">
+            <p>The digitally generated version has visible aliasing happening toward the higher frequencies. In the analog version however, those 
+                aliases do not exist inherently in the signal, and are not introduced by the audio interface's analog-to-digital converter.</p>
+        </div>
+    </div>
+    <div w3-include-html="../includes/footer.html"></div>
+    <script>includeHTML();</script>
+</body>
